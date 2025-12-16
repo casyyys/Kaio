@@ -3,7 +3,7 @@ name: Build Kaioken Kernel
 on:
   workflow_dispatch:
   push:
-    branches: [kaioken]
+    branches: [main]
 
 jobs:
   build:
