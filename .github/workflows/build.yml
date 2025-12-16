@@ -47,25 +47,21 @@ jobs:
         export CROSS_COMPILE=aarch64-linux-gnu-
         make ulysse_defconfig
         make -j$(nproc) Image.gz-dtb
+        make -j$(nproc) modules
 
     - name: Create Flashable Zip
       run: |
         mkdir -p anykernel
         cp arch/arm64/boot/Image.gz-dtb anykernel/Image.gz-dtb
-        
-        cat > anykernel/anykernel.sh << 'EOL'
-#!/system/bin/sh
-ui_print "Kaioken Kernel by Wildan"
-ui_print "For Xiaomi Redmi Note 5A"
-block=/dev/block/bootdevice/by-name/boot
-is_slot_device=0
-ramdisk_compression=auto
-. tools/ak3-core.sh
-dump_boot
-write_boot
-EOL
-        
-        chmod +x anykernel/anykernel.sh
+        echo '#!/system/bin/sh' > anykernel/anykernel.sh
+        echo 'ui_print "Kaioken Kernel by Wildan"' >> anykernel/anykernel.sh
+        echo 'ui_print "For Xiaomi Redmi Note 5A"' >> anykernel/anykernel.sh
+        echo 'block=/dev/block/bootdevice/by-name/boot' >> anykernel/anykernel.sh
+        echo 'is_slot_device=0' >> anykernel/anykernel.sh
+        echo 'ramdisk_compression=auto' >> anykernel/anykernel.sh
+        echo '. tools/ak3-core.sh' >> anykernel/anykernel.sh
+        echo 'dump_boot' >> anykernel/anykernel.sh
+        echo 'write_boot' >> anykernel/anykernel.sh
         zip -r9 Kaioken-Kernel-ulysse.zip anykernel/
 
     - name: Upload Artifact
