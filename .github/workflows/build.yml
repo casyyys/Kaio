@@ -1,0 +1,80 @@
+name: Build Kaioken Kernel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Che]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Kernel Source
+      uses: actions/checkout@v4
+      with:
+        repository: xiaomi-ulysse/android_kernel_xiaomi_ulysse-4.9
+        ref: 10
+        fetch-depth: 1
+
+    - name: Setup Build Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git bc bison flex libssl-dev make
+        sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu python3
+
+    - name: Edit Kernel Config
+      run: |
+        sed -i 's/CONFIG_LOCALVERSION="-lineageos"/CONFIG_LOCALVERSION="-Kaioken"/' arch/arm64/configs/ulysse_defconfig
+        echo "# KAIOKEN Features" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_WIREGUARD=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_KPROBES=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_UPROBES=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_FTRACE=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_FUNCTION_TRACER=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_TCP_BBR_ADVANCED=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_MSM_CPU_FREQ_BOUNCE=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_CPU_OVERCLOCK=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_ARM64_PAN=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_STACKPROTECTOR_STRONG=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_ZRAM_LZ4_COMPRESS=y" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_ZRAM_DEFAULT_COMP_ALGORITHM=lz4" >> arch/arm64/configs/ulysse_defconfig
+        echo "CONFIG_IOSCHED_FIOPS=y" >> arch/arm64/configs/ulysse_defconfig
+
+    - name: Build Kernel
+      run: |
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        make ulysse_defconfig
+        make -j$(nproc) Image.gz-dtb
+        make -j$(nproc) modules
+
+    - name: Create Flashable Zip
+      run: |
+        mkdir -p anykernel
+        cp arch/arm64/boot/Image.gz-dtb anykernel/Image.gz-dtb
+        echo '#!/system/bin/sh' > anykernel/anykernel.sh
+        echo 'ui_print "Kaioken Kernel by Wildan"' >> anykernel/anykernel.sh
+        echo 'ui_print "For Xiaomi Redmi Note 5A"' >> anykernel/anykernel.sh
+        echo 'block=/dev/block/bootdevice/by-name/boot' >> anykernel/anykernel.sh
+        echo 'is_slot_device=0' >> anykernel/anykernel.sh
+        echo 'ramdisk_compression=auto' >> anykernel/anykernel.sh
+        echo '. tools/ak3-core.sh' >> anykernel/anykernel.sh
+        echo 'dump_boot' >> anykernel/anykernel.sh
+        echo 'write_boot' >> anykernel/anykernel.sh
+        zip -r9 Kaioken-Kernel-ulysse.zip anykernel/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kaioken-Kernel
+        path: |
+          arch/arm64/boot/Image.gz-dtb
+          Kaioken-Kernel-ulysse.zip
